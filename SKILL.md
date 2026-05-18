@@ -31,13 +31,13 @@ CLI Tools:           Agent Builds:
 ### 1. Fetch Properties
 
 ```bash
-# Fetch from all portals (automatic parallel fetch)
-{baseDir}/fetch.sh all 4
+# Fetch from all portals
+python3 -m uk_property_cli.cli search --portal all --location edinburgh --min-beds 4
 
 # Individual portals
-python3 {baseDir}/parsers/espc.py 4        # Edinburgh
-python3 {baseDir}/parsers/rightmove.py 4   # UK-wide
-python3 {baseDir}/parsers/zoopla.py 4      # UK-wide + sold prices
+python3 -m uk_property_cli.cli search --portal espc --location edinburgh --min-beds 4
+python3 -m uk_property_cli.cli search --portal rightmove --location edinburgh --min-beds 4
+python3 -m uk_property_cli.cli search --portal zoopla --location edinburgh --min-beds 4
 ```
 
 **Output:** JSON with normalized property data
@@ -67,8 +67,8 @@ python3 {baseDir}/filter.py properties.json \
   --max-price 600000 \
   --min-beds 4
 
-# Use built-in Edinburgh presets
-python3 {baseDir}/filter.py properties.json --use-defaults --max-price 600000
+# Profiles/preferences live in the calling agent skill, not in this public repo
+python3 -m uk_property_cli.cli search --profile /path/to/private-profile.json --apply-filters --rank
 ```
 
 **Output:** JSON with filtered properties
@@ -85,21 +85,11 @@ python3 {baseDir}/compare.py cache/2026-02-15.json cache/2026-02-16.json
 - `removed_listings`: Properties removed from market
 - `price_changes`: Price reductions/increases
 
-### 5. User Preferences
+### 5. Agent/User Preferences
 
-```bash
-# Interactive setup (one-time)
-python3 {baseDir}/setup.py
+Preferences are a layer above this repo. Store them in the calling agent skill or in a private profile JSON file and pass it with `--profile /path/to/profile.json`.
 
-# Loads from preferences.json
-cat {baseDir}/preferences.json
-```
-
-**Contains:**
-- Search criteria (beds, price, types)
-- Area preferences (desired, excluded, premium)
-- Scoring weights
-- Deduplication settings
+This keeps the public scraper generic and prevents household/client workflows leaking into source history.
 
 ---
 

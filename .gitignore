@@ -24,3 +24,8 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Packaging artefacts
+*.egg-info/
+build/
+dist/

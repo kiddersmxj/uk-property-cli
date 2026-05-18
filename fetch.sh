@@ -1,109 +1,60 @@
 #!/bin/bash
-# Unified property fetch dispatcher
-
+# Backward-compatible dispatcher. Prefer: uk-property <command>
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CACHE_DIR="$SCRIPT_DIR/cache"
-
-# Create cache directory
 mkdir -p "$CACHE_DIR"
 
 usage() {
-    cat << EOF
-UK Property CLI - Fetch and process properties
+  cat <<'USAGE'
+UK Property CLI
 
 USAGE:
-    ./fetch.sh <command> [options]
+  ./fetch.sh all <beds> [rightmove_location_ids] [max_price]
+  ./fetch.sh espc <beds>
+  ./fetch.sh rightmove <beds> [max_pages] [location_ids] [max_price] [property_types]
+  ./fetch.sh zoopla <beds>
+  ./fetch.sh dedupe <files...>
+  ./fetch.sh filter <file> [opts]
+  ./fetch.sh compare <old> <new>
 
-COMMANDS:
-    all <beds> [rightmove_location_ids] [max_price]
-                            Fetch from all portals. Optional Rightmove comma-separated region IDs and max price.
-    espc <beds>             Fetch from ESPC only
-    rightmove <beds> [max_pages] [location_ids] [max_price] [property_types]
-                            Fetch from Rightmove only
-    zoopla <beds>           Fetch from Zoopla only
-    
-    dedupe <files...>       Deduplicate properties
-    filter <file> [opts]    Filter properties
-    compare <old> <new>     Compare snapshots
-    
-EXAMPLES:
-    # Fetch all portals (4+ beds)
-    ./fetch.sh all 4
-    
-    # Deduplicate across portals
-    ./fetch.sh dedupe cache/espc.json cache/rightmove.json
-    
-    # Filter to good areas, max £600k
-    ./fetch.sh filter cache/all.json --use-defaults --max-price 600000
-    
-EOF
-    exit 1
+Prefer the new CLI:
+  python3 -m uk_property_cli.cli search --portal rightmove --min-beds 2 --location edinburgh
+  uk-property search --profile edinburgh-brrr --apply-filters --rank
+USAGE
+  exit 1
 }
 
-if [ $# -eq 0 ]; then
-    usage
-fi
-
-COMMAND="$1"
-shift
+[ $# -gt 0 ] || usage
+COMMAND="$1"; shift
 
 case "$COMMAND" in
-    all)
-        BEDS="${1:-4}"
-        RM_LOCATIONS="${2:-REGION^475}"
-        MAX_PRICE="${3:-}"
-        echo "Fetching from all portals (${BEDS}+ beds; Rightmove ${RM_LOCATIONS}${MAX_PRICE:+; max £$MAX_PRICE})..." >&2
-        
-        python3 "$SCRIPT_DIR/parsers/espc.py" "$BEDS" > "$CACHE_DIR/espc.json" 2>/dev/null &
-        PID_ESPC=$!
-        
-        python3 "$SCRIPT_DIR/parsers/rightmove.py" "$BEDS" 3 "$RM_LOCATIONS" "$MAX_PRICE" > "$CACHE_DIR/rightmove.json" 2>/dev/null &
-        PID_RM=$!
-        
-        python3 "$SCRIPT_DIR/parsers/zoopla.py" "$BEDS" > "$CACHE_DIR/zoopla.json" 2>/dev/null &
-        PID_Z=$!
-        
-        # Wait for all
-        wait $PID_ESPC $PID_RM $PID_Z
-        
-        echo "✅ All portals fetched" >&2
-        
-        # Combine into single file
-        python3 -c "
-import json
-with open('$CACHE_DIR/espc.json') as f: espc = json.load(f)
-with open('$CACHE_DIR/rightmove.json') as f: rm = json.load(f)
-with open('$CACHE_DIR/zoopla.json') as f: z = json.load(f)
-
-all_props = espc['properties'] + rm['properties'] + z['properties']
-print(json.dumps({'properties': all_props}, indent=2))
-" > "$CACHE_DIR/all.json"
-        
-        cat "$CACHE_DIR/all.json"
-        ;;
-    
-    espc|rightmove|zoopla)
-        BEDS="${1:-4}"
-        shift || true
-        python3 "$SCRIPT_DIR/parsers/${COMMAND}.py" "$BEDS" "$@"
-        ;;
-    
-    dedupe)
-        python3 "$SCRIPT_DIR/dedupe.py" "$@"
-        ;;
-    
-    filter)
-        python3 "$SCRIPT_DIR/filter.py" "$@"
-        ;;
-    
-    compare)
-        python3 "$SCRIPT_DIR/compare.py" "$@"
-        ;;
-    
-    *)
-        echo "Unknown command: $COMMAND"
-        usage
-        ;;
+  all)
+    BEDS="${1:-4}"
+    RM_LOCATIONS="${2:-REGION^475}"
+    MAX_PRICE="${3:-}"
+    python3 -m uk_property_cli.cli search --portal all --min-beds "$BEDS" --location-id "$RM_LOCATIONS" ${MAX_PRICE:+--max-price "$MAX_PRICE"}
+    ;;
+  rightmove)
+    BEDS="${1:-4}"; MAX_PAGES="${2:-3}"; LOCATIONS="${3:-REGION^475}"; MAX_PRICE="${4:-}"; TYPES="${5:-}"
+    python3 "$SCRIPT_DIR/parsers/rightmove.py" "$BEDS" "$MAX_PAGES" "$LOCATIONS" "$MAX_PRICE" "$TYPES"
+    ;;
+  espc|zoopla)
+    BEDS="${1:-4}"
+    python3 "$SCRIPT_DIR/parsers/${COMMAND}.py" "$BEDS"
+    ;;
+  dedupe)
+    python3 -m uk_property_cli.cli dedupe "$@"
+    ;;
+  filter)
+    python3 -m uk_property_cli.cli filter "$@"
+    ;;
+  compare)
+    python3 -m uk_property_cli.cli compare "$@"
+    ;;
+  *)
+    echo "Unknown command: $COMMAND" >&2
+    usage
+    ;;
 esac

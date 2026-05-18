@@ -26,6 +26,9 @@ uk-property search --profile ~/property-skills/profiles/example-search.json --ap
 # Find portal-specific location IDs
 uk-property locations edinburgh
 
+# Start the optional MCP stdio server for tool-calling agents
+uk-property-mcp
+
 # Deduplicate saved portal outputs
 uk-property dedupe cache/espc.json cache/rightmove.json cache/zoopla.json
 
@@ -106,7 +109,36 @@ Every listing is normalised to `property-listing.v1`:
 }
 ```
 
-## Profiles and agent skills
+## Agent skill and MCP
+
+This repo ships two integration surfaces:
+
+1. `SKILL.md` — instructions for agents. It explains when to use the CLI, which commands/tools to call, what belongs in the private agent layer, and what not to leak into the public repo.
+2. `uk-property-mcp` — a dependency-free MCP stdio server for hosts that prefer tool calls over shell commands.
+
+MCP tools:
+
+- `uk_property_search`
+- `uk_property_locations`
+- `uk_property_dedupe`
+- `uk_property_filter`
+- `uk_property_compare`
+
+Example MCP server config:
+
+```json
+{
+  "mcpServers": {
+    "uk-property": {
+      "command": "uk-property-mcp"
+    }
+  }
+}
+```
+
+Use the MCP server for interactive agents. Use the CLI for cron jobs, scripts and reproducible command receipts.
+
+## Profiles and private agent logic
 
 The repo deliberately does **not** ship business, household or client-specific profiles.
 

@@ -22,6 +22,7 @@ dependencies = []
 
 [project.scripts]
 uk-property = "uk_property_cli.cli:main"
+uk-property-mcp = "uk_property_cli.mcp_server:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

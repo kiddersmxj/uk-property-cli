@@ -17,9 +17,11 @@ USAGE:
     ./fetch.sh <command> [options]
 
 COMMANDS:
-    all <beds>              Fetch from all portals
+    all <beds> [rightmove_location_ids] [max_price]
+                            Fetch from all portals. Optional Rightmove comma-separated region IDs and max price.
     espc <beds>             Fetch from ESPC only
-    rightmove <beds>        Fetch from Rightmove only
+    rightmove <beds> [max_pages] [location_ids] [max_price] [property_types]
+                            Fetch from Rightmove only
     zoopla <beds>           Fetch from Zoopla only
     
     dedupe <files...>       Deduplicate properties
@@ -50,12 +52,14 @@ shift
 case "$COMMAND" in
     all)
         BEDS="${1:-4}"
-        echo "Fetching from all portals (${BEDS}+ beds)..." >&2
+        RM_LOCATIONS="${2:-REGION^475}"
+        MAX_PRICE="${3:-}"
+        echo "Fetching from all portals (${BEDS}+ beds; Rightmove ${RM_LOCATIONS}${MAX_PRICE:+; max £$MAX_PRICE})..." >&2
         
         python3 "$SCRIPT_DIR/parsers/espc.py" "$BEDS" > "$CACHE_DIR/espc.json" 2>/dev/null &
         PID_ESPC=$!
         
-        python3 "$SCRIPT_DIR/parsers/rightmove.py" "$BEDS" > "$CACHE_DIR/rightmove.json" 2>/dev/null &
+        python3 "$SCRIPT_DIR/parsers/rightmove.py" "$BEDS" 3 "$RM_LOCATIONS" "$MAX_PRICE" > "$CACHE_DIR/rightmove.json" 2>/dev/null &
         PID_RM=$!
         
         python3 "$SCRIPT_DIR/parsers/zoopla.py" "$BEDS" > "$CACHE_DIR/zoopla.json" 2>/dev/null &
@@ -82,7 +86,8 @@ print(json.dumps({'properties': all_props}, indent=2))
     
     espc|rightmove|zoopla)
         BEDS="${1:-4}"
-        python3 "$SCRIPT_DIR/parsers/${COMMAND}.py" "$BEDS"
+        shift || true
+        python3 "$SCRIPT_DIR/parsers/${COMMAND}.py" "$BEDS" "$@"
         ;;
     
     dedupe)

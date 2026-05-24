@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "uk-property-cli"
+version = "0.2.0"
+description = "Agent-friendly UK property search CLI with normalised JSON output"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [{name = "Zish Ashraf"}]
+keywords = ["property", "rightmove", "zoopla", "espc", "cli", "agents"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Environment :: Console",
+  "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
+]
+
+dependencies = []
+
+[project.scripts]
+uk-property = "uk_property_cli.cli:main"
+uk-property-mcp = "uk_property_cli.mcp_server:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["uk_property_cli*"]
+

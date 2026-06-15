@@ -50,6 +50,7 @@ def search_properties(arguments: JsonDict) -> JsonDict:
         location=arguments.get("location") or search.get("location") or "edinburgh",
         location_id=arguments.get("location_id") or "",
         max_pages=int(arguments.get("max_pages") or search.get("max_pages") or 3),
+        channel=arguments.get("channel") or search.get("channel") or "buy",
     )
 
     portal_arg = arguments.get("portal", "all")
@@ -160,6 +161,7 @@ TOOLS: Dict[str, Dict[str, Any]] = {
             "type": "object",
             "properties": {
                 "portal": {"type": "string", "enum": ["all", "rightmove", "espc", "zoopla"], "default": "all"},
+                "channel": {"type": "string", "enum": ["buy", "rent"], "default": "buy", "description": "Buy (for-sale) or rent listings; rent prices are monthly"},
                 "location": {"type": "string", "default": "edinburgh"},
                 "location_id": {"type": "string", "description": "Optional portal-specific location id, e.g. REGION^475"},
                 "min_beds": {"type": "integer", "default": 1},

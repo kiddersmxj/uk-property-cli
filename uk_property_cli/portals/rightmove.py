@@ -28,8 +28,9 @@ class RightmoveAdapter(PortalAdapter):
         loc = (location_id or config.location_id or resolve("rightmove", config.location)).replace("^", "%5E")
         max_price = f"&maxPrice={config.max_price}" if config.max_price else ""
         property_types = f"&propertyTypes={config.property_types}" if config.property_types else ""
+        channel_path = "property-to-rent" if config.channel == "rent" else "property-for-sale"
         return (
-            "https://www.rightmove.co.uk/property-for-sale/find.html"
+            f"https://www.rightmove.co.uk/{channel_path}/find.html"
             f"?locationIdentifier={loc}&minBedrooms={config.min_beds}{max_price}{property_types}&sortType=6&index={index}"
         )
 
@@ -57,11 +58,13 @@ class RightmoveAdapter(PortalAdapter):
                 continue
         return [], 0
 
-    def parse_property(self, prop: Dict[str, Any], fetch_url: str, location_id: str) -> Optional[Dict[str, Any]]:
+    def parse_property(self, prop: Dict[str, Any], fetch_url: str, location_id: str, channel: str = "buy") -> Optional[Dict[str, Any]]:
         address = prop.get("displayAddress", "")
 
         price_data = prop.get("price") or {}
         price = price_data.get("amount", 0) or 0
+        if channel == "rent" and (price_data.get("frequency") or "").lower().startswith("week"):
+            price = round(price * 52 / 12)
         display_price = (price_data.get("displayPrices") or [{}])[0]
         qualifier = (display_price.get("displayPriceQualifier") or "").strip()
         raw_price = (display_price.get("displayPrice") or "").strip()
@@ -89,7 +92,7 @@ class RightmoveAdapter(PortalAdapter):
             "images": images,
             "features": prop.get("keyFeatures") or [],
             "portal": self.name,
-            "category": categorize(price, beds),
+            "category": "rent" if channel == "rent" else categorize(price, beds),
             "fetched_at": utc_now_iso(),
             "parser_version": self.parser_version,
             "fetch_url": fetch_url,
@@ -113,7 +116,7 @@ class RightmoveAdapter(PortalAdapter):
                     break
                 new_this_page = 0
                 for raw in raw_properties:
-                    parsed = self.parse_property(raw, url, location_id)
+                    parsed = self.parse_property(raw, url, location_id, config.channel)
                     if parsed and parsed["id"] not in seen_ids:
                         seen_ids.add(parsed["id"])
                         properties.append(parsed)

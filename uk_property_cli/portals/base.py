@@ -14,6 +14,7 @@ class SearchConfig:
     location: str = "edinburgh"
     location_id: str = ""
     max_pages: int = 3
+    channel: str = "buy"
     extra: Dict[str, Any] = field(default_factory=dict)
 
 

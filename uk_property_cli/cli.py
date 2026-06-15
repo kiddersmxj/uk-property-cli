@@ -34,6 +34,7 @@ def build_search_config(args: argparse.Namespace, profile: Dict[str, Any]) -> Se
         location=args.location or search.get("location") or "edinburgh",
         location_id=args.location_id or "",
         max_pages=int(args.max_pages or search.get("max_pages") or 3),
+        channel=args.channel or search.get("channel") or "buy",
     )
 
 
@@ -152,6 +153,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     search = sub.add_parser("search", help="Search one or all portals")
     search.add_argument("--portal", choices=["all", "rightmove", "espc", "zoopla"], default="all")
+    search.add_argument("--channel", choices=["buy", "rent"], default="buy")
     search.add_argument("--profile", help="Profile name/path from profiles/*.json")
     search.add_argument("--location", default="edinburgh")
     search.add_argument("--location-id", help="Portal-specific location id, e.g. REGION^475")

@@ -26,6 +26,9 @@ class ESPCAdapter(PortalAdapter):
 
     def build_search_url(self, config: SearchConfig) -> str:
         location = resolve("espc", config.location)
+        if config.channel == "rent":
+            ptype = "flat" if "flat" in (config.property_types or "").lower() else "house"
+            return f"https://espc.com/properties?rental=true&locations={location}&minbeds={config.min_beds}plus&ptype={ptype}&sort=date-desc"
         kind = "flats" if "flat" in (config.property_types or "").lower() else "houses"
         return f"https://espc.com/property-for-sale/{location}/{kind}/{config.min_beds}-bed?sort=date-desc"
 
@@ -51,10 +54,16 @@ class ESPCAdapter(PortalAdapter):
 
             price = 0
             price_text = "Price on application"
-            price_match = re.search(r'(Offers Over|Fixed Price|Offers From).*?£([\d,]+)', section, re.DOTALL)
-            if price_match:
-                price_text = f"{price_match.group(1)} £{price_match.group(2)}"
-                price = parse_price(price_match.group(2))
+            if config.channel == "rent":
+                price_match = re.search(r'£([\d,]+)', section)
+                if price_match:
+                    price = parse_price(price_match.group(1))
+                    price_text = f"£{price_match.group(1)} pcm"
+            else:
+                price_match = re.search(r'(Offers Over|Fixed Price|Offers From).*?£([\d,]+)', section, re.DOTALL)
+                if price_match:
+                    price_text = f"{price_match.group(1)} £{price_match.group(2)}"
+                    price = parse_price(price_match.group(2))
 
             beds = int(config.min_beds or 0)
             beds_match = re.search(r'(\d+)\s+bed', section, re.IGNORECASE)
@@ -83,7 +92,7 @@ class ESPCAdapter(PortalAdapter):
                 "image_url": image_url,
                 "images": [image_url] if image_url else [],
                 "portal": self.name,
-                "category": categorize(price, beds),
+                "category": "rent" if config.channel == "rent" else categorize(price, beds),
                 "fetched_at": utc_now_iso(),
                 "parser_version": self.parser_version,
                 "fetch_url": fetch_url,

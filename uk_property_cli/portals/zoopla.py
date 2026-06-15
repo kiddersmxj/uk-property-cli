@@ -28,6 +28,8 @@ class ZooplaAdapter(PortalAdapter):
     def build_search_url(self, config: SearchConfig) -> str:
         location = resolve("zoopla", config.location)
         max_price = f"&price_max={config.max_price}" if config.max_price else ""
+        if config.channel == "rent":
+            return f"https://www.zoopla.co.uk/to-rent/property/{location}/?beds_min={config.min_beds}{max_price}&price_frequency=per_month&results_sort=newest_listings"
         return f"https://www.zoopla.co.uk/for-sale/property/{location}/?beds_min={config.min_beds}{max_price}&results_sort=newest_listings"
 
     def fetch(self, url: str) -> str:
@@ -36,7 +38,7 @@ class ZooplaAdapter(PortalAdapter):
         result = subprocess.run(["firecrawl", "scrape", url, "--format", "markdown"], capture_output=True, text=True, timeout=45)
         return result.stdout
 
-    def parse_properties(self, markdown: str, fetch_url: str) -> List[Dict[str, Any]]:
+    def parse_properties(self, markdown: str, fetch_url: str, channel: str = "buy") -> List[Dict[str, Any]]:
         properties = []
         property_pattern = r'\[£([\d,]+).*?(\d+)\s+beds?.*?(\d+)\s+baths?.*?\n(.*?)\n(.*?)\]'
         for price_text, beds, baths, address, description in re.findall(property_pattern, markdown, re.DOTALL | re.IGNORECASE):
@@ -57,7 +59,7 @@ class ZooplaAdapter(PortalAdapter):
                 "description": description.strip()[:200],
                 "url": f"https://www.zoopla.co.uk/for-sale/details/{prop_id}/",
                 "portal": self.name,
-                "category": categorize(price, int(beds)),
+                "category": "rent" if channel == "rent" else categorize(price, int(beds)),
                 "fetched_at": utc_now_iso(),
                 "parser_version": self.parser_version,
                 "fetch_url": fetch_url,
@@ -69,7 +71,7 @@ class ZooplaAdapter(PortalAdapter):
         markdown = self.fetch(url)
         if not markdown:
             return {"portal": self.name, "fetched_at": utc_now_iso(), "count": 0, "fetch_urls": [url], "properties": [], "error": "Firecrawl CLI not available or API key not set"}
-        properties = self.parse_properties(markdown, url)
+        properties = self.parse_properties(markdown, url, config.channel)
         return {"portal": self.name, "fetched_at": utc_now_iso(), "count": len(properties), "fetch_urls": [url], "properties": properties, "note": "Uses Firecrawl CLI/API"}
 
 
